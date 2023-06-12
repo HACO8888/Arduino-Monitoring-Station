@@ -1,39 +1,10 @@
 #include <EasyNextionLibrary.h>
 #include <SoftwareSerial.h>
 #include <SCD30.h>
-#include <DHT.h>
 
-#define DHTPIN 2
-#define DHTTYPE DHT11
-#define GET_DATA_EVERY 2000
-#define DATA_REFRESH_RATE 1000
-
-EasyNex myNex(Serial1);
-DHT dht(DHTPIN, DHTTYPE);
+EasyNex myNex(Serial2);
 
 int CurrentAirTemp = 25;
-
-void setup()
-{
-  dht.begin();
-  myNex.begin(9600);
-  Serial.begin(9600);
-  myNex.writeStr("page 0");
-}
-
-void loop()
-{
-  myNex.NextionListen();
-  if (myNex.currentPageId == 0)
-  {
-    float humidity = dht.readHumidity();
-    float temperature = dht.readTemperature();
-    String humiString = String(humidity, 1);
-    String tempString = String(temperature, 1);
-    myNex.writeStr("Humi.txt", humiString + "%");
-    myNex.writeStr("Temp.txt", tempString + "℃");
-  }
-}
 
 class SCD30dataClass
 {
@@ -42,7 +13,6 @@ public:
   float temp;
   float humid;
 };
-
 SCD30dataClass SCD30sensor()
 {
   SCD30dataClass SCD30data;
@@ -67,7 +37,6 @@ public:
   int pm25;
   int pm100;
 };
-
 PMdataClass PMsensor()
 {
   PMdataClass PMdata;
@@ -122,3 +91,33 @@ PMdataClass PMsensor()
     Serial1.read();
 
   return PMdata;
+}
+
+void setup()
+{
+  Wire.begin();
+  myNex.begin(9600);
+  Serial.begin(9600);
+  Serial2.begin(115200);
+  scd30.initialize();
+  myNex.writeStr("page 0");
+}
+
+void loop()
+{
+  myNex.NextionListen();
+  if (myNex.currentPageId == 0)
+  {
+    SCD30dataClass SCD30data = SCD30sensor();
+    String humiString = String(SCD30data.humid, 1);
+    String tempString = String(SCD30data.temp, 1);
+    String co2String = String(SCD30data.co2, 0);
+    myNex.writeStr("Humi.txt", humiString + "%");
+    myNex.writeStr("Temp.txt", tempString + "℃");
+    myNex.writeStr("CO2.txt", co2String + " PPM");
+
+    PMdataClass PMdata = PMsensor();
+    String pm25String = String(PMdata.pm25, 0);
+    myNex.writeStr("PM25.txt", co2String + " ug/m3");
+  }
+}
