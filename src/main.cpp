@@ -1,8 +1,7 @@
 #include <EasyNextionLibrary.h>
-#include <SoftwareSerial.h>
 #include <SCD30.h>
 
-EasyNex myNex(Serial2);
+EasyNex myNex(Serial1);
 
 int CurrentAirTemp = 25;
 
@@ -30,82 +29,27 @@ SCD30dataClass SCD30sensor()
   return SCD30data;
 }
 
-class PMdataClass
-{
-public:
-  int pm10;
-  int pm25;
-  int pm100;
-};
-PMdataClass PMsensor()
-{
-  PMdataClass PMdata;
-
-  long pm10 = 0;
-  long pm25 = 0;
-  long pm100 = 0;
-
-  int count = 0;
-
-  unsigned char c;
-  unsigned char high;
-
-  while (Serial1.available())
-  {
-    c = Serial1.read();
-
-    if ((count == 0 && c != 0x42) || (count == 1 && c != 0x4d))
-    {
-      Serial.println("check failed");
-      break;
-    }
-
-    if (count > 15)
-    {
-      break;
-    }
-    else if (count == 4 || count == 6 || count == 8 || count == 10 || count == 12 || count == 14)
-    {
-      high = c;
-    }
-    else if (count == 5)
-    {
-      pm10 = 256 * high + c;
-      PMdata.pm10 = pm10;
-    }
-    else if (count == 7)
-    {
-      pm25 = 256 * high + c;
-      PMdata.pm25 = pm25;
-    }
-    else if (count == 9)
-    {
-      pm100 = 256 * high + c;
-      PMdata.pm100 = pm100;
-    }
-
-    count++;
-  }
-
-  while (Serial1.available())
-    Serial1.read();
-
-  return PMdata;
-}
-
 void setup()
 {
-  Wire.begin();
+  // Setup TDT
   myNex.begin(9600);
-  Serial.begin(9600);
-  Serial2.begin(115200);
+
+  // Setup SCD30
+  Wire.begin();
+  Serial.begin(115200);
   scd30.initialize();
-  myNex.writeStr("page 0");
+
+  // Setup PM2
+  Serial2.begin(9600);
+
+  // Serial output setup
+  Serial.begin(9600);
 }
 
 void loop()
 {
   myNex.NextionListen();
+
   if (myNex.currentPageId == 0)
   {
     SCD30dataClass SCD30data = SCD30sensor();
@@ -116,8 +60,7 @@ void loop()
     myNex.writeStr("Temp.txt", tempString + "℃");
     myNex.writeStr("CO2.txt", co2String + " PPM");
 
-    PMdataClass PMdata = PMsensor();
-    String pm25String = String(PMdata.pm25, 0);
-    myNex.writeStr("PM25.txt", co2String + " ug/m3");
+    // String pm25String = String(PUT_DATA_HERE);
+    // myNex.writeStr("PM25.txt", pm25String + " ug/m3");
   }
 }
