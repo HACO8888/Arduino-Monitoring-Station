@@ -1,6 +1,7 @@
 #include <EasyNextionLibrary.h>
 #include <WiFiEsp.h>
 #include <SCD30.h>
+#include <secret.h>
 
 WiFiEspClient client;
 EasyNex myNex(Serial1);
