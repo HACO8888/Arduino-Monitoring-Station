@@ -8,11 +8,11 @@ EasyNex myNex(Serial1);
 int CurrentAirTemp = 25;
 int status = WL_IDLE_STATUS;
 
-char ssid[] = "K1D1-NETWORK-2.4";
-char pass[] = "12345678";
+char ssid[] = WIFI_SSID;
+char pass[] = WIFI_PASS;
 
 char server[] = "api.thingspeak.com";
-char apiKey[] = "HGO8UBKWK0W04DO6";
+char apiKey[] = API_KEY;
 
 unsigned long lastTime = 0;
 unsigned long interval = 20000;
