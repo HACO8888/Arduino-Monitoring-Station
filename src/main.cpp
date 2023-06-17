@@ -1,7 +1,8 @@
 #include <EasyNextionLibrary.h>
+// #include <IRremote.h>
 #include <WiFiEsp.h>
-#include <SCD30.h>
 #include <secret.h>
+#include <SCD30.h>
 
 WiFiEspClient client;
 EasyNex myNex(Serial1);
@@ -44,6 +45,9 @@ SCD30dataClass SCD30sensor()
 
 void setup()
 {
+  // Setup IR
+  // IrReceiver.begin(9, ENABLE_LED_FEEDBACK);
+
   // Setup TDT
   myNex.begin(9600);
 
@@ -78,27 +82,40 @@ void loop()
   myNex.writeStr("Temp.txt", tempString + "℃");
   myNex.writeStr("CO2.txt", co2String + " PPM");
 
-  // String pm25String = String(PUT_DATA_HERE);
-  // myNex.writeStr("PM25.txt", pm25String + " ug/m3");
+// if(myNex.currentPageId != myNex.lastCurrentPageId){
+//   if(myNex.currentPageId == 0){
+//     Serial.print("page 0");
+//   }else if(myNex.currentPageId == 1){
+//     Serial.print("page 1");
+//   }
+//   myNex.lastCurrentPageId = myNex.currentPageId;
+// }
 
-  if (millis() - lastTime >= interval)
+
+// if (IrReceiver.decode())
+// {
+//   IrReceiver.printIRResultShort(&Serial);
+//   IrReceiver.printIRSendUsage(&Serial);
+//   IrReceiver.resume();
+// }
+
+// String pm25String = String(PUT_DATA_HERE);
+// myNex.writeStr("PM25.txt", pm25String + " ug/m3");
+
+if (millis() - lastTime >= interval)
+{
+  if (client.connect(server, 80))
   {
-    if (client.connect(server, 80))
-    {
-      Serial.println("Connecting to ThingSpeak...");
-      client.print("GET /update?api_key=");
-      client.print(apiKey);
-      client.print("&field1=");
-      client.print(SCD30data.temp);
-      client.print("&field2=");
-      client.print(SCD30data.humid);
-      client.print("&field3=");
-      client.println(SCD30data.co2);
-    }
-    else
-    {
-      Serial.println("Connection to ThingSpeak failed");
-    }
-    lastTime = millis();
+    client.print("GET /update?api_key=");
+    client.print(apiKey);
+    client.print("&field1=");
+    client.print(SCD30data.temp);
+    client.print("&field2=");
+    client.print(SCD30data.humid);
+    client.print("&field3=");
+    client.println(SCD30data.co2);
   }
+  client.stop();
+  lastTime = millis();
+}
 }
