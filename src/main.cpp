@@ -1,11 +1,12 @@
 #include <EasyNextionLibrary.h>
-// #include <IRremote.h>
+#include <SensirionI2CSen5x.h>
 #include <WiFiEsp.h>
 #include <secret.h>
 #include <SCD30.h>
 
 WiFiEspClient client;
 EasyNex myNex(Serial1);
+SensirionI2CSen5x sen5x;
 
 int CurrentAirTemp = 25;
 int status = WL_IDLE_STATUS;
@@ -45,16 +46,16 @@ SCD30dataClass SCD30sensor()
 
 void setup()
 {
-  // Setup IR
-  // IrReceiver.begin(9, ENABLE_LED_FEEDBACK);
-
   // Setup TDT
   myNex.begin(9600);
 
-  // Setup SCD30
+  // Setup SCD30 And Sen5x
   Wire.begin();
   Serial.begin(115200);
   scd30.initialize();
+  sen5x.begin(Wire);
+  sen5x.deviceReset();
+  sen5x.startMeasurement();
 
   // Serial output setup
   Serial.begin(9600);
@@ -82,40 +83,44 @@ void loop()
   myNex.writeStr("Temp.txt", tempString + "℃");
   myNex.writeStr("CO2.txt", co2String + " PPM");
 
-// if(myNex.currentPageId != myNex.lastCurrentPageId){
-//   if(myNex.currentPageId == 0){
-//     Serial.print("page 0");
-//   }else if(myNex.currentPageId == 1){
-//     Serial.print("page 1");
-//   }
-//   myNex.lastCurrentPageId = myNex.currentPageId;
-// }
+  float massConcentrationPm1p0;
+  float massConcentrationPm2p5;
+  float massConcentrationPm4p0;
+  float massConcentrationPm10p0;
+  float ambientHumidity;
+  float ambientTemperature;
+  float vocIndex;
+  float noxIndex;
 
+  sen5x.readMeasuredValues(massConcentrationPm1p0, massConcentrationPm2p5, massConcentrationPm4p0, massConcentrationPm10p0, ambientHumidity, ambientTemperature, vocIndex, noxIndex);
 
-// if (IrReceiver.decode())
-// {
-//   IrReceiver.printIRResultShort(&Serial);
-//   IrReceiver.printIRSendUsage(&Serial);
-//   IrReceiver.resume();
-// }
+  String pm25String = String(massConcentrationPm2p5);
+  myNex.writeStr("PM25.txt", pm25String + " ug/m3");
 
-// String pm25String = String(PUT_DATA_HERE);
-// myNex.writeStr("PM25.txt", pm25String + " ug/m3");
-
-if (millis() - lastTime >= interval)
-{
-  if (client.connect(server, 80))
+  if (millis() - lastTime >= interval)
   {
-    client.print("GET /update?api_key=");
-    client.print(apiKey);
-    client.print("&field1=");
-    client.print(SCD30data.temp);
-    client.print("&field2=");
-    client.print(SCD30data.humid);
-    client.print("&field3=");
-    client.println(SCD30data.co2);
+    if (client.connect(server, 80))
+    {
+      client.print("GET /update?api_key=");
+      client.print(apiKey);
+      client.print("&field1=");
+      client.print(SCD30data.temp);
+      client.print("&field2=");
+      client.print(SCD30data.humid);
+      client.print("&field3=");
+      client.print(SCD30data.co2);
+      client.print("&field4=");
+      client.print(noxIndex);
+      client.print("&field5=");
+      client.print(vocIndex);
+      client.print("&field6=");
+      client.print(massConcentrationPm1p0);
+      client.print("&field7=");
+      client.print( massConcentrationPm2p5);
+      client.print("&field8=");
+      client.println(massConcentrationPm10p0);
+    }
+    client.stop();
+    lastTime = millis();
   }
-  client.stop();
-  lastTime = millis();
-}
 }
