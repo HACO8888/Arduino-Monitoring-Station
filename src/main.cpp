@@ -116,7 +116,7 @@ void loop()
       client.print("&field6=");
       client.print(massConcentrationPm1p0);
       client.print("&field7=");
-      client.print( massConcentrationPm2p5);
+      client.print(massConcentrationPm2p5);
       client.print("&field8=");
       client.println(massConcentrationPm10p0);
     }
