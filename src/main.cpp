@@ -1,25 +1,39 @@
-#include <EasyNextionLibrary.h>
+#include <Adafruit_I2CDevice.h>
 #include <SensirionI2CSen5x.h>
-#include <WiFiEsp.h>
+#include <SoftwareSerial.h>
+#include <Nextion.h>
 #include <secret.h>
+#include <RTCLib.h>
 #include <SCD30.h>
+#include <SPI.h>
+#include <SD.h>
 
-WiFiEspClient client;
-EasyNex myNex(Serial1);
+// TDT components define
+NexPage page0 = NexPage(0, 0, "Landing");
+NexPage page1 = NexPage(1, 0, "Home");
+NexPage page2 = NexPage(2, 0, "Monitor");
+NexPage page3 = NexPage(3, 0, "Light");
+NexPage page4 = NexPage(0, 0, "QRCode");
+NexProgressBar j0 = NexProgressBar(0, 1, "j0");
+NexText t0 = NexText(1, 1, "time");
+NexText temp = NexText(2, 1, "temp");
+NexText humid = NexText(2, 2, "humid");
+NexText co2 = NexText(2, 3, "co");
+NexText pm25 = NexText(2, 4, "pm");
+NexSlider led0 = NexSlider(3, 1, "led0");
+
+// Sensor and Modules define
+RTC_DS3231 rtc;
 SensirionI2CSen5x sen5x;
 
+// Pin define
+int LEDPin = 2;
+
+// num define
+uint32_t CurrentLED = 0;
 int CurrentAirTemp = 25;
-int status = WL_IDLE_STATUS;
 
-char ssid[] = WIFI_SSID;
-char pass[] = WIFI_PASS;
-
-char server[] = "api.thingspeak.com";
-char apiKey[] = API_KEY;
-
-unsigned long lastTime = 0;
-unsigned long interval = 20000;
-
+// SCD30 define
 class SCD30dataClass
 {
 public:
@@ -47,9 +61,17 @@ SCD30dataClass SCD30sensor()
 void setup()
 {
   // Setup TDT
-  myNex.begin(9600);
+  nexInit();
+  // led0.attachPop(led0PopCallback);
 
-  // Setup SCD30 And Sen5x
+  for (int i = 5; i <= 100; i += 1)
+  {
+    j0.setValue(i);
+    delay(50);
+  }
+  page1.show();
+
+  // Setup SCD30 And Sen5x And RTC
   Wire.begin();
   Serial.begin(115200);
   scd30.initialize();
@@ -63,25 +85,29 @@ void setup()
   // Setup PM2
   Serial2.begin(9600);
 
-  // ESP-01S setup
-  Serial3.begin(9600);
-  WiFi.init(&Serial3);
-  while (status != WL_CONNECTED)
+  // Setup Pin
+  pinMode(2, INPUT); // LED
+
+  // Setup RTC
+  if (!rtc.begin())
   {
-    status = WiFi.begin(ssid, pass);
+    Serial.println("No DS3231 RTC found!");
+  }
+
+  if (rtc.lostPower())
+  {
+    Serial.println("RTC Reset！");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 }
 
 void loop()
 {
-  myNex.NextionListen();
+  DateTime now = rtc.now();
   SCD30dataClass SCD30data = SCD30sensor();
   String humidString = String(SCD30data.humid, 1);
   String tempString = String(SCD30data.temp, 1);
   String co2String = String(SCD30data.co2, 0);
-  myNex.writeStr("Humid.txt", humidString + "%");
-  myNex.writeStr("Temp.txt", tempString + "℃");
-  myNex.writeStr("CO2.txt", co2String + " PPM");
 
   float massConcentrationPm1p0;
   float massConcentrationPm2p5;
@@ -95,32 +121,26 @@ void loop()
   sen5x.readMeasuredValues(massConcentrationPm1p0, massConcentrationPm2p5, massConcentrationPm4p0, massConcentrationPm10p0, ambientHumidity, ambientTemperature, vocIndex, noxIndex);
 
   String pm25String = String(massConcentrationPm2p5);
-  myNex.writeStr("PM25.txt", pm25String + " ug/m3");
 
-  if (millis() - lastTime >= interval)
-  {
-    if (client.connect(server, 80))
-    {
-      client.print("GET /update?api_key=");
-      client.print(apiKey);
-      client.print("&field1=");
-      client.print(SCD30data.temp);
-      client.print("&field2=");
-      client.print(SCD30data.humid);
-      client.print("&field3=");
-      client.print(SCD30data.co2);
-      client.print("&field4=");
-      client.print(noxIndex);
-      client.print("&field5=");
-      client.print(vocIndex);
-      client.print("&field6=");
-      client.print(massConcentrationPm1p0);
-      client.print("&field7=");
-      client.print(massConcentrationPm2p5);
-      client.print("&field8=");
-      client.println(massConcentrationPm10p0);
-    }
-    client.stop();
-    lastTime = millis();
-  }
+  // Send data to Nextion
+  // const char *humid = humidString.c_str();
+  // const char *temp = tempString.c_str();
+  // const char *co2 = co2String.c_str();
+  // const char *pm25 = pm25String.c_str();
+  sendCommand(("humid.txt=\"" + humidString + "\"").c_str());
+  sendCommand(("temp.txt=\"" + tempString + "\"").c_str());
+  sendCommand(("co.txt=\"" + co2String + "\"").c_str());
+  sendCommand(("pm.txt=\"" + pm25String + "\"").c_str());
+
+  // Send time to Nextion
+  // const char *time = now.toString("YYYY-MM-DD hh:mm:ss");
+  // sendCommand("time.txt=\"" + now.toString("YYYY-MM-DD hh:mm:ss") + "\"");
+  char timeBuffer[20];
+  snprintf(timeBuffer, sizeof(timeBuffer), "%04d-%02d-%02d %02d:%02d:%02d",
+           now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
+  sendCommand(("time.txt=\"" + String(timeBuffer) + "\"").c_str());
+
+  // Get LED value from Nextion
+  led0.getValue(&CurrentLED);
+  analogWrite(LEDPin, 255 - CurrentLED);
 }
