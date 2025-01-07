@@ -123,20 +123,14 @@ void loop()
   String pm25String = String(massConcentrationPm2p5);
 
   // Send data to Nextion
-  // const char *humid = humidString.c_str();
-  // const char *temp = tempString.c_str();
-  // const char *co2 = co2String.c_str();
-  // const char *pm25 = pm25String.c_str();
   sendCommand(("humid.txt=\"" + humidString + "\"").c_str());
   sendCommand(("temp.txt=\"" + tempString + "\"").c_str());
   sendCommand(("co.txt=\"" + co2String + "\"").c_str());
   sendCommand(("pm.txt=\"" + pm25String + "\"").c_str());
 
   // Send time to Nextion
-  // const char *time = now.toString("YYYY-MM-DD hh:mm:ss");
-  // sendCommand("time.txt=\"" + now.toString("YYYY-MM-DD hh:mm:ss") + "\"");
   char timeBuffer[20];
-  snprintf(timeBuffer, sizeof(timeBuffer), "%04d-%02d-%02d %02d:%02d:%02d",
+  snprintf(timeBuffer, sizeof(timeBuffer), "%04d/%02d/%02d %02d:%02d:%02d",
            now.year(), now.month(), now.day(), now.hour(), now.minute(), now.second());
   sendCommand(("time.txt=\"" + String(timeBuffer) + "\"").c_str());
 
