@@ -15,11 +15,7 @@ NexPage page1 = NexPage(1, 0, "Monitor");
 NexPage page2 = NexPage(2, 0, "Light");
 NexPage page3 = NexPage(3, 0, "Timer");
 NexPage page4 = NexPage(0, 0, "Source");
-
-// page 0 components define
 NexProgressBar j0 = NexProgressBar(0, 1, "j0");
-
-// page 2 components define
 NexSlider led0 = NexSlider(2, 5, "led0");
 NexSlider led1 = NexSlider(2, 6, "led1");
 NexSlider led2 = NexSlider(2, 7, "led2");
@@ -72,7 +68,8 @@ void setup()
     j0.setValue(i);
     delay(10);
   }
-  page1.show();
+  .00
+  page1.show(); 
 
   // Setup SCD30 And Sen5x And RTC
   Wire.begin();
