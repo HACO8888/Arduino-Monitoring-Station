@@ -1,6 +1,7 @@
 #include <Adafruit_I2CDevice.h>
 #include <SensirionI2CSen5x.h>
 #include <SoftwareSerial.h>
+#include <Arduino.h>
 #include <Nextion.h>
 #include <secret.h>
 #include <RTCLib.h>
@@ -10,17 +11,20 @@
 
 // TDT components define
 NexPage page0 = NexPage(0, 0, "Landing");
-NexPage page1 = NexPage(1, 0, "Home");
-NexPage page2 = NexPage(2, 0, "Monitor");
-NexPage page3 = NexPage(3, 0, "Light");
-NexPage page4 = NexPage(0, 0, "QRCode");
+NexPage page1 = NexPage(1, 0, "Monitor");
+NexPage page2 = NexPage(2, 0, "Light");
+NexPage page3 = NexPage(3, 0, "Timer");
+NexPage page4 = NexPage(0, 0, "Source");
+
+// page 0 components define
 NexProgressBar j0 = NexProgressBar(0, 1, "j0");
-NexText t0 = NexText(1, 1, "time");
-NexText temp = NexText(2, 1, "temp");
-NexText humid = NexText(2, 2, "humid");
-NexText co2 = NexText(2, 3, "co");
-NexText pm25 = NexText(2, 4, "pm");
-NexSlider led0 = NexSlider(3, 1, "led0");
+
+// page 2 components define
+NexSlider led0 = NexSlider(2, 5, "led0");
+NexSlider led1 = NexSlider(2, 6, "led1");
+NexSlider led2 = NexSlider(2, 7, "led2");
+NexSlider led3 = NexSlider(2, 8, "led3");
+NexSlider led4 = NexSlider(2, 9, "led4");
 
 // Sensor and Modules define
 RTC_DS3231 rtc;
@@ -62,12 +66,11 @@ void setup()
 {
   // Setup TDT
   nexInit();
-  // led0.attachPop(led0PopCallback);
 
   for (int i = 5; i <= 100; i += 1)
   {
     j0.setValue(i);
-    delay(50);
+    delay(10);
   }
   page1.show();
 
@@ -136,5 +139,6 @@ void loop()
 
   // Get LED value from Nextion
   led0.getValue(&CurrentLED);
+  Serial.println(CurrentLED);
   analogWrite(LEDPin, 255 - CurrentLED);
 }
